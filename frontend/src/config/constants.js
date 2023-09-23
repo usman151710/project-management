@@ -39,11 +39,11 @@ const SortOptions = [
     },
     {
         label: "Time Created (New - Old)",
-        value: "time_asc",
+        value: "createdAt_desc",
     },
     {
         label: "Time Created (Old - New)",
-        value: "time_desc",
+        value: "createdAt_asc",
     },
 ]
 
@@ -53,9 +53,20 @@ const ProjectStatus = {
     COMPLETED: "completed"
 }
 
+const projectApiUrl = "/api/projects";
+
+const apiMethods = {
+    GET: "GET",
+    POST: "POST",
+    PUT: "PUT",
+    PATCH: "PATCH"
+}
+
 export {
     techStacks,
     SearchOptions,
     SortOptions,
-    ProjectStatus
+    ProjectStatus,
+    projectApiUrl,
+    apiMethods
 }

@@ -1,25 +1,73 @@
 import React, { useState } from 'react';
-import { Button, Form, Image, Input, Modal, Select } from 'antd';
+import { Button, Form, Image, Input, Select } from 'antd';
 import { techStacks } from '../../config/constants';
+import { updateProjectAPI } from '../../services/projects';
+import { useAuthContext } from '../../hooks/useAuthContext';
+import { useProjectsContext } from '../../hooks/useProjectsContext';
 
-const EditModal = ({ isOpen, handleOk, handleCancel, project }) => {
-  const [imageUrl, setImageUrl] = useState(project.imageUrl);
-  const [image, setImage] = useState(null);
+const EditForm = ({ project, modalClose }) => {
+  const [imageUrl, setImageUrl] = useState("");
+  const [imageFile, setImageFile] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [form] = Form.useForm();
+  const { user } = useAuthContext();
+  const { dispatch } = useProjectsContext();
+  const formInitialValues = {
+    name: project.name || "",
+    description: project.description || "",
+    githubUrl: project.githubUrl || "",
+    siteUrl: project.siteUrl || "",
+    techStacks: project.techStacks ? project.techStacks.split(",") : [],
+  }
 
+  const handleSubmit = async (values) => {
 
-  const handleSubmit = (values) => {
-    handleOk(values);
+    if (!imageFile) {
+      setError("Please select Image..");
+      return;
+    }
+
+    setIsLoading(true)
+
+    let data = new FormData();
+
+    for (const key in values) {
+      if (key === "techStacks") {
+        data.append(key, values[key].join(","));
+      }
+      else {
+        data.append(key, values[key]);
+      }
+    }
+
+    data.append("image", imageFile);
+
+    try {
+      const response = await updateProjectAPI(project._id, data, user.token);
+      const json = await response.json();
+      if (response.ok) {
+        setError(null);
+        modalClose()
+        dispatch({ type: "UPDATE_PROJECT", payload: json });
+      }
+    } catch (error) {
+      setError(error.message)
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   const imageUpload = (file) => {
     setImageUrl(URL.createObjectURL(file));
-    setImage(file);
+    setImageFile(file);
   }
 
   return (
-    <Modal title="Basic Modal" open={isOpen} onOk={handleOk} onCancel={handleCancel} destroyOnClose footer={null}>
+    <>
       <Form
         name="basic"
+        form={form}
         style={{ marginTop: 32 }}
         labelCol={{
           span: 8,
@@ -29,11 +77,12 @@ const EditModal = ({ isOpen, handleOk, handleCancel, project }) => {
         }}
         onFinish={handleSubmit}
         autoComplete="off"
+        preserve={false}
+        initialValues={formInitialValues}
       >
         <Form.Item
           label="Name"
           name="name"
-          initialValue={project?.name}
           rules={[
             {
               required: true,
@@ -46,28 +95,24 @@ const EditModal = ({ isOpen, handleOk, handleCancel, project }) => {
         <Form.Item
           label="Description"
           name="description"
-          initialValue={project?.description}
         >
           <Input />
         </Form.Item>
         <Form.Item
           label="Github URL"
-          name="url"
-          initialValue={project?.githubUrl}
+          name="githubUrl"
         >
-          <Input disabled />
+          <Input />
         </Form.Item>
         <Form.Item
           label="Website URL"
           name="siteUrl"
-          initialValue={project?.siteUrl}
         >
           <Input />
         </Form.Item>
         <Form.Item
           label="TechStacks"
           name="techStacks"
-          initialValue={project?.techStacks}
         >
           <Select
             mode="multiple"
@@ -101,10 +146,11 @@ const EditModal = ({ isOpen, handleOk, handleCancel, project }) => {
             span: 24,
           }}
         >
-          <Button type="primary" htmlType="submit">Submit</Button>
+          <Button type="primary" htmlType="submit" loading={isLoading}>Submit</Button>
         </Form.Item>
       </Form>
-    </Modal>
+      {error && <div className="error">{error}</div>}
+    </>
   );
 };
-export default EditModal;
+export default React.memo(EditForm);

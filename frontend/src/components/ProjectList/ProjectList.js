@@ -2,10 +2,29 @@ import { memo } from 'react';
 import { Badge, Button, Card, Image, List, Typography, Modal } from "antd";
 import { GithubOutlined, LinkOutlined, EditOutlined, DownloadOutlined, CheckCircleOutlined, ExclamationCircleFilled } from '@ant-design/icons';
 import './ProjectList.css';
+import { updateProjectStatusAPI } from '../../services/projects';
+import { useAuthContext } from '../../hooks/useAuthContext';
+import { useProjectsContext } from '../../hooks/useProjectsContext';
+import { ProjectStatus } from '../../config/constants';
 
 const { confirm } = Modal;
 
 const ProjectList = ({ data, isEdit = false, isArchive = false, isComplete = false, showModal }) => {
+
+    const { user } = useAuthContext();
+    const { dispatch } = useProjectsContext();
+
+    const updateProjectStatus = async (id, data) => {
+        try {
+            const response = await updateProjectStatusAPI(id, data, user.token);
+            const json = await response.json();
+            if (response.ok) {
+                dispatch({ type: "UPDATE_PROJECT", payload: json });
+            }
+        } catch (error) {
+            console.log('error: ', error);
+        }
+    }
 
     const showConfirm = (item) => {
         confirm({
@@ -13,8 +32,9 @@ const ProjectList = ({ data, isEdit = false, isArchive = false, isComplete = fal
             icon: <ExclamationCircleFilled />,
             content: item.description,
             onOk() {
-                console.log('OK');
-                // update status api call here e.g archive
+                updateProjectStatus(item._id, {
+                    status: ProjectStatus.ARCHIVED
+                })
             },
             onCancel() {
                 console.log('Cancel');
@@ -22,8 +42,8 @@ const ProjectList = ({ data, isEdit = false, isArchive = false, isComplete = fal
         });
     };
 
-    const handleComplete = () => {
-        //update status api here e.g complete
+    const handleComplete = (item) => {
+        updateProjectStatus(item._id, { status: ProjectStatus.COMPLETED });
     }
 
     return (
@@ -50,16 +70,12 @@ const ProjectList = ({ data, isEdit = false, isArchive = false, isComplete = fal
                                     <GithubOutlined />
                                 </Typography.Link>
                             </div>
-                            <div>
-                                {item.techStacks.map((item) => (
-                                    <Badge key={item} className="badge" status="default" text={item} />
-                                ))}
-                            </div>
+                            <Typography.Text>{item.techStacks}</Typography.Text>
                             <Badge className="badge" status="success" text={item.status} />
                             <div className="action-container">
                                 {isEdit && (<Button onClick={() => showModal(item)} icon={<EditOutlined />}>Edit</Button>)}
                                 {isArchive && (<Button onClick={() => showConfirm(item)} icon={<DownloadOutlined />}>Archive</Button>)}
-                                {isComplete && (<Button icon={<CheckCircleOutlined />}>Complete</Button>)}
+                                {isComplete && (<Button onClick={() => handleComplete(item)} icon={<CheckCircleOutlined />}>Complete</Button>)}
                             </div>
                         </div>
                     </div>

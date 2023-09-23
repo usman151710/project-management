@@ -1,7 +1,13 @@
 .search {
     width: 400px;
+    margin-left: 8px;
 }
 
 .search-select {
     width: 150px;
+}
+
+.search-container {
+    display: flex;
+    align-items: center;
 }
